@@ -1,0 +1,10 @@
+[
+    { "type": "fbx", "path": "/public/animations/Standard Walk.fbx" },
+    { "type": "vrma", "path": "/public/animations/VRMA_01.vrma" },
+    { "type": "vrma", "path": "/public/animations/VRMA_02.vrma" },
+    { "type": "vrma", "path": "/public/animations/VRMA_03.vrma" },
+    { "type": "vrma", "path": "/public/animations/VRMA_04.vrma" },
+    { "type": "vrma", "path": "/public/animations/VRMA_05.vrma" },
+    { "type": "vrma", "path": "/public/animations/VRMA_06.vrma" },
+    { "type": "vrma", "path": "/public/animations/VRMA_07.vrma" }
+]

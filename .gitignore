@@ -1,0 +1,23 @@
+# 依存関係のディレクトリ
+/node_modules
+
+# package-lock.json
+package-lock.json
+
+# ログ
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# エディタ・IDE固有のファイル
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS固有のファイル
+.DS_Store
+Thumbs.db

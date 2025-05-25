@@ -1,0 +1,88 @@
+{
+  "display": {
+    "width": 1024,
+    "height": 600,
+    "orientation": "portrait"
+  },
+  "model": {
+    "path": "./public/models/models.vrm",
+    "scale": 1.0
+  },
+  "animations": {
+    "walk": {
+      "path": "./public/animations/Standard Walk.fbx",
+      "name": "Standard Walk"
+    },
+    "idle": [
+      {
+        "path": "./public/animations/VRMA_01.vrma",
+        "name": "Animation 1"
+      },
+      {
+        "path": "./public/animations/VRMA_02.vrma",
+        "name": "Animation 2"
+      },
+      {
+        "path": "./public/animations/VRMA_03.vrma",
+        "name": "Animation 3"
+      },
+      {
+        "path": "./public/animations/VRMA_04.vrma",
+        "name": "Animation 4"
+      },
+      {
+        "path": "./public/animations/VRMA_05.vrma",
+        "name": "Animation 5"
+      },
+      {
+        "path": "./public/animations/VRMA_06.vrma",
+        "name": "Animation 6"
+      },
+      {
+        "path": "./public/animations/VRMA_07.vrma",
+        "name": "Animation 7"
+      }
+    ]
+  },
+  "background": {
+    "color": "#ffffff",
+    "imagePath": ""
+  },
+  "character": {
+    "moveSpeed": 0.5,
+    "rotationSpeed": 0.05,
+    "moveInterval": 5000,
+    "idleInterval": 6000
+  },
+  "camera": {
+    "position": {
+      "x": 0,
+      "y": 1.5,
+      "z": 3
+    },
+    "lookAt": {
+      "x": 0,
+      "y": 1,
+      "z": 0
+    }
+  },
+  "lighting": {
+    "ambient": {
+      "color": "#ffffff",
+      "intensity": 0.5
+    },
+    "directional": {
+      "color": "#ffffff",
+      "intensity": 0.8,
+      "position": {
+        "x": 1,
+        "y": 2,
+        "z": 1      }
+    }
+  },
+  "debug": {
+    "enabled": true,
+    "showFPS": true,
+    "showBoundaries": false
+  }
+}

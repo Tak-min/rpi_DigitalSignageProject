@@ -1,0 +1,19 @@
+# Digital Signage Projectの自動起動
+
+@lxpanel --profile LXDE-pi
+@pcmanfm --desktop --profile LXDE-pi
+@xscreensaver -no-splash
+
+# 画面を常にオンに保持
+@xset s noblank
+@xset s off
+@xset -dpms
+
+# Webサーバーを起動
+@cd /home/pi/digital-signage && python3 -m http.server 8000 &
+
+# 少し待機してからブラウザを起動
+@sleep 5
+
+# Chromiumをキオスクモードで起動
+@chromium-browser --noerrdialogs --disable-infobars --kiosk http://localhost:8000/

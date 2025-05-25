@@ -1,0 +1,16 @@
+{
+  "name": "3d-digital-signage",
+  "version": "1.0.0",
+  "description": "3D character digital signage for Raspberry Pi",
+  "main": "index.js",
+  "scripts": {
+    "start": "serve .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@pixiv/three-vrm": "^2.0.0",
+    "serve": "^14.2.1",
+    "three": "^0.164.1"
+  },
+  "type": "module"
+}
