@@ -7,13 +7,15 @@ import { VRM, VRMUtils, VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { AnimationManager } from './AnimationManager.js';
 import { CharacterController } from './CharacterController.js';
 import { DebugPanel } from './DebugPanel.js';
+import { VRMBoneAnalyzer } from './VRMBoneAnalyzer.js';
+import { MixamoVRMMapper } from './MixamoVRMMapper.js';
 
 // 設定ファイルを読み込む
 let config;
 
 // グローバル変数
 let scene, camera, renderer;
-let vrm, mixer, clock;
+let vrm, mixer, clock, vrmMapper;
 let animationManager, characterController;
 let debugPanel;
 let loadingElement;
@@ -174,7 +176,38 @@ async function loadVRM() {
           vrm.scene.scale.setScalar(config.model.scale);
           
           // アニメーションミキサーの作成
-          mixer = new THREE.AnimationMixer(vrm.scene);
+          mixer = new THREE.AnimationMixer(vrm.scene);          // グローバルにVRMインスタンスとユーティリティを保存（他のクラスからアクセス可能に）
+          window.vrm = vrm;
+          window.VRMBoneAnalyzer = VRMBoneAnalyzer;
+          window.VRMUtils = VRMUtils;
+            // VRMボーン構造を解析してデバッグ情報を出力
+          console.log('=== VRMボーン構造解析開始 ===');
+          const { boneInfo, mapping } = VRMBoneAnalyzer.printDebugInfo(vrm);
+          
+          // MixamoVRMMapperの初期化
+          vrmMapper = new MixamoVRMMapper(vrm);
+          window.vrmMapper = vrmMapper; // グローバルアクセス用
+          
+          // デバッグモードを有効化（開発用、本番環境では無効化する）
+          if (config.debug && config.debug.enabled) {
+            vrmMapper.setDebugMode(true);
+            console.log('MixamoVRMMapperのデバッグモードを有効化しました');
+          }
+          
+          // ボーン構造のサマリーを表示
+          const humanoidBoneCount = Object.keys(boneInfo.humanoidBones).length;
+          const fingerBoneCount = Object.entries(mapping).filter(([mixamoName]) => 
+            mixamoName.includes('Hand') && 
+            (mixamoName.includes('Thumb') || 
+             mixamoName.includes('Index') || 
+             mixamoName.includes('Middle') || 
+             mixamoName.includes('Ring') || 
+             mixamoName.includes('Pinky') || 
+             mixamoName.includes('Little'))
+          ).length;
+          
+          console.log(`VRMボーン統計: 全${boneInfo.allBones.length}ボーン中、ヒューマノイド${humanoidBoneCount}ボーン、指${fingerBoneCount}ボーン`);
+          console.log('=== VRMボーン構造解析完了 ===');
           
           resolve(vrm);
         } else {
@@ -195,12 +228,23 @@ async function loadVRM() {
       }
     );
   });
-}
-
-// アニメーションの初期化
+}  // アニメーションの初期化
 async function initializeAnimations() {
   // アニメーション管理クラスの初期化
   animationManager = new AnimationManager(vrm, mixer);
+  
+  // VRMインスタンスを設定
+  animationManager.setVRM(vrm);
+  
+  // アニメーションローダにVRMマッパーを設定
+  if (animationManager.animationLoader) {
+    animationManager.animationLoader.setVRM(vrm);
+  }
+  
+  console.log('アニメーション初期化開始...');
+  console.log('VRM:', vrm ? '読み込み済み' : '未読み込み');
+  console.log('Mixer:', mixer ? '初期化済み' : '未初期化');
+  console.log('VRMMapper:', vrmMapper ? '初期化済み' : '未初期化');
   
   // JSON設定ファイルからアニメーションを読み込む
   try {
@@ -211,6 +255,8 @@ async function initializeAnimations() {
     
     // エラーが発生した場合は、設定ファイルから読み込む（フォールバック）
     try {
+      console.log('フォールバックアニメーション読み込み開始...');
+      
       // 歩行アニメーションの読み込み
       await animationManager.loadWalkAnimation(
         config.animations.walk.path,
@@ -219,13 +265,18 @@ async function initializeAnimations() {
       
       // アイドルアニメーションの読み込み
       await animationManager.loadIdleAnimations(config.animations.idle);
+      
+      console.log('フォールバックアニメーションの読み込み完了');
     } catch (fallbackError) {
       console.error('フォールバックアニメーションの読み込みにも失敗しました:', fallbackError);
     }
   }
   
-  // 最初のアイドルアニメーションを再生
-  animationManager.playRandomIdleAnimation();
+  // 少し待ってからアニメーションを開始
+  setTimeout(() => {
+    console.log('初期アニメーション開始...');
+    animationManager.playRandomIdleAnimation();
+  }, 500);
 }
 
 // キャラクターコントローラーの初期化
@@ -237,6 +288,12 @@ function initializeCharacterController() {
     config, 
     animationManager
   );
+  
+  // VRMインスタンスを設定
+  characterController.setVRM(vrm);
+  
+  // アニメーション管理にもVRMを設定
+  animationManager.setVRM(vrm);
   
   // 初期位置を設定
   characterController.setInitialPosition();
@@ -304,10 +361,9 @@ function animate() {
   if (animationManager) {
     animationManager.update();
   }
-  
-  // キャラクターの更新
+    // キャラクターの更新
   if (characterController) {
-    characterController.update();
+    characterController.update(delta);
   }
   
   // VRMの更新
@@ -326,18 +382,67 @@ function animate() {
 function updateDebugInfo() {
   if (!debugPanel || !config.debug || !config.debug.enabled) return;
   
-  // デバッグ情報を収集
+  // 基本デバッグ情報を収集
   const debugInfo = {
     'FPS': stats.fps,
     '経過時間': stats.elapsedTime.toFixed(1) + 's',
-    'アニメーション状態': animationManager ? animationManager.getCurrentState() : 'なし',
-    'モデル位置': vrm ? `X:${vrm.scene.position.x.toFixed(2)}, Y:${vrm.scene.position.y.toFixed(2)}, Z:${vrm.scene.position.z.toFixed(2)}` : 'なし',
-    '移動中': characterController ? (characterController.isMoving ? 'はい' : 'いいえ') : 'なし',
-    'モデルロード済': vrm ? 'はい' : 'いいえ'
+    'モデルロード済': vrm ? 'はい' : 'いいえ',
+    'ミキサー': mixer ? 'はい' : 'いいえ'
   };
+  
+  // アニメーション管理のデバッグ情報
+  if (animationManager) {
+    const animDebug = animationManager.getDebugInfo();
+    debugInfo['アニメーション状態'] = animDebug.currentState;
+    debugInfo['現在のアニメーション'] = animDebug.currentAnimationName;
+    debugInfo['再生中'] = animDebug.isPlaying ? 'はい' : 'いいえ';
+    debugInfo['歩行アニメーション'] = animDebug.hasWalkAnimation ? 'あり' : 'なし';
+    debugInfo['アイドルアニメーション数'] = animDebug.idleAnimationCount;
+  }
+  
+  // キャラクターコントローラーのデバッグ情報
+  if (characterController) {
+    const controllerDebug = characterController.getDebugInfo();
+    debugInfo['移動中'] = controllerDebug.isMoving ? 'はい' : 'いいえ';
+    debugInfo['位置'] = `X:${controllerDebug.position.x}, Z:${controllerDebug.position.z}`;
+    debugInfo['回転'] = `${controllerDebug.rotation} rad`;
+    
+    // ステートマシンの情報
+    if (controllerDebug.stateMachine) {
+      debugInfo['状態'] = controllerDebug.stateMachine.currentState;
+      debugInfo['状態継続時間'] = `${(controllerDebug.stateMachine.stateDuration / 1000).toFixed(1)}s`;
+    }
+    
+    // 表情の情報
+    if (controllerDebug.expressions) {
+      debugInfo['表情システム'] = controllerDebug.expressions.isEnabled ? '有効' : '無効';
+      debugInfo['現在の表情'] = controllerDebug.expressions.currentExpressions.join(', ') || 'なし';
+      debugInfo['まばたき'] = controllerDebug.expressions.isBlinking ? 'はい' : 'いいえ';
+    }
+  }
+  
+  // VRMの詳細情報
+  if (vrm) {
+    debugInfo['VRMヒューマノイド'] = vrm.humanoid ? 'あり' : 'なし';
+    debugInfo['VRM表情'] = vrm.expressionManager ? 'あり' : 'なし';
+    if (vrm.scene) {
+      debugInfo['VRMボーン数'] = countBones(vrm.scene);
+    }
+  }
   
   // デバッグパネルを更新
   debugPanel.update(debugInfo);
+}
+
+// ボーン数をカウントするヘルパー関数
+function countBones(object) {
+  let count = 0;
+  object.traverse((child) => {
+    if (child.isBone) {
+      count++;
+    }
+  });
+  return count;
 }
 
 // ページロード時に初期化を実行

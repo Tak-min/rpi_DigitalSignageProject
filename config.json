@@ -47,9 +47,8 @@
   "background": {
     "color": "#ffffff",
     "imagePath": ""
-  },
-  "character": {
-    "moveSpeed": 0.5,
+  },  "character": {
+    "moveSpeed": 0.01,
     "rotationSpeed": 0.05,
     "moveInterval": 5000,
     "idleInterval": 6000
